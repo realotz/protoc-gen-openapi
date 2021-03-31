@@ -137,17 +137,22 @@ components:
     AuthServiceV1WxLoginReq:
       properties:
         appid:
+          description: appid
           type: string
         code:
+          description: 验证码
           type: string
       type: object
     AuthServiceV1WxLoginRes:
       properties:
         openid:
+          description: 订单列表
           type: string
         token:
+          description: 订单列表
           type: string
         user_info:
+          description: 订单列表
           properties:
             account:
               type: string
@@ -339,6 +344,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AuthServiceV1WxLoginReq'
+        description: 订单列表
         required: true
       responses:
         "200":

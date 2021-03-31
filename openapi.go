@@ -109,7 +109,7 @@ func genComponents(swagger *openapi3.Swagger, file *protogen.File) {
 			s := createSchema(filed.Desc)
 			s.Description = commentDesc(filed.Comments)
 			schema.Properties[string(filed.Desc.Name())] = &openapi3.SchemaRef{
-				Value: createSchema(filed.Desc),
+				Value: s,
 			}
 		}
 		swagger.Components.Schemas[string(Marshal(msg.Desc.FullName()))] = &openapi3.SchemaRef{

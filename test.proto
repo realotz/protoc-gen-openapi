@@ -89,6 +89,7 @@ message UserInfoReq{
   string uid = 1;
 }
 
+//订单列表
 message WxLoginReq{
   //验证码
   string code = 1;
@@ -96,12 +97,17 @@ message WxLoginReq{
   string appid = 2;
 }
 
+//订单列表
 message WxLoginRes{
+  //订单列表
   string openid = 1;
+  //订单列表
   string token = 4;
+  //订单列表
   UserInfoMsg user_info = 5;
 }
 
+//订单列表
 message UserInfoMsg{
   string avatar = 1;
   uint32 platform = 2;
