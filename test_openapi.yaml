@@ -1,0 +1,357 @@
+components:
+  schemas:
+    AuthServiceV1JwtReq:
+      properties:
+        jwt:
+          type: string
+      type: object
+    AuthServiceV1LoginReq:
+      properties:
+        account:
+          type: string
+        ip:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+      type: object
+    AuthServiceV1LoginRes:
+      properties:
+        err_code:
+          format: int32
+          type: integer
+        err_message:
+          type: string
+        token:
+          type: string
+      type: object
+    AuthServiceV1LoginStatusReq:
+      properties:
+        token:
+          type: string
+      type: object
+    AuthServiceV1LoginStatusRes:
+      properties:
+        playload:
+          type: string
+        status:
+          format: int32
+          type: integer
+      type: object
+    AuthServiceV1Response:
+      type: object
+    AuthServiceV1SendSmsReq:
+      properties:
+        phone:
+          type: string
+      type: object
+    AuthServiceV1SmsLoginReq:
+      properties:
+        avatarUrl:
+          type: string
+        code:
+          type: string
+        nickName:
+          type: string
+        phone:
+          type: string
+        token:
+          type: string
+      type: object
+    AuthServiceV1UpInfoReq:
+      properties:
+        avatarUrl:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        gender:
+          type: string
+        nickName:
+          type: string
+        province:
+          type: string
+        uid:
+          type: string
+      type: object
+    AuthServiceV1UserInfoMsg:
+      properties:
+        account:
+          type: string
+        age:
+          format: int32
+          type: integer
+        avatar:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        openid:
+          type: string
+        phone:
+          type: string
+        platform:
+          format: int32
+          type: integer
+        sex:
+          format: int32
+          type: integer
+        uid:
+          format: int32
+          type: integer
+        user_type:
+          format: int32
+          type: integer
+      type: object
+    AuthServiceV1UserInfoReq:
+      properties:
+        uid:
+          type: string
+      type: object
+    AuthServiceV1WxBindReq:
+      properties:
+        avatarUrl:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        encryptedData:
+          type: string
+        gender:
+          type: string
+        iv:
+          type: string
+        nickName:
+          type: string
+        openid:
+          type: string
+        province:
+          type: string
+        token:
+          type: string
+      type: object
+    AuthServiceV1WxLoginReq:
+      properties:
+        appid:
+          type: string
+        code:
+          type: string
+      type: object
+    AuthServiceV1WxLoginRes:
+      properties:
+        openid:
+          type: string
+        token:
+          type: string
+        user_info:
+          properties:
+            account:
+              type: string
+            age:
+              format: int32
+              type: integer
+            avatar:
+              type: string
+            email:
+              type: string
+            name:
+              type: string
+            openid:
+              type: string
+            phone:
+              type: string
+            platform:
+              format: int32
+              type: integer
+            sex:
+              format: int32
+              type: integer
+            uid:
+              format: int32
+              type: integer
+            user_type:
+              format: int32
+              type: integer
+          type: object
+      type: object
+info:
+  description: auth.service.v1
+  title: auth.service.v1
+  version: v1
+openapi: 3.0.0
+paths:
+  /auth.service.v1.login:
+    description: 登录
+    post:
+      description: 登录
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthServiceV1LoginReq'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1LoginRes'
+          description: ok
+      summary: 登录
+      tags:
+      - auth.service.v1.authService
+    summary: Login
+  /auth.service.v1.login.status:
+    description: 检查登录状态
+    post:
+      description: 检查登录状态
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthServiceV1LoginStatusReq'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1LoginStatusRes'
+          description: ok
+      summary: 检查登录状态
+      tags:
+      - auth.service.v1.authService
+    summary: LoginStatus
+  /auth.service.v1.sendSms:
+    description: 发送短信验证码
+    post:
+      description: 发送短信验证码
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthServiceV1SendSmsReq'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1Response'
+          description: ok
+      summary: 发送短信验证码
+      tags:
+      - auth.service.v1.authService
+    summary: SendSms
+  /auth.service.v1.upInfo:
+    description: 更新用户信息
+    post:
+      description: 更新用户信息
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthServiceV1UpInfoReq'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1Response'
+          description: ok
+      summary: 更新用户信息
+      tags:
+      - auth.service.v1.authService
+    summary: UpInfo
+  /auth.service.v1.userinfo:
+    description: 用户信息
+    get:
+      description: 用户信息
+      parameters:
+      - in: query
+        name: uid
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1UserInfoMsg'
+          description: ok
+      summary: 用户信息
+      tags:
+      - auth.service.v1.authService
+    summary: UserInfo
+  /auth.service.v1.wxBind:
+    description: 微信登录绑定
+    post:
+      description: 微信登录绑定
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthServiceV1WxBindReq'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1WxLoginRes'
+          description: ok
+      summary: 微信登录绑定
+      tags:
+      - auth.service.v1.authService
+    summary: WxBind
+  /auth.service.v1.wxBindForSms:
+    description: 微信绑定手机号
+    post:
+      description: 微信绑定手机号
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthServiceV1SmsLoginReq'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1WxLoginRes'
+          description: ok
+      summary: 微信绑定手机号
+      tags:
+      - auth.service.v1.authService
+    summary: WxBindForSms
+  /auth.service.v1.wxLogin:
+    description: 微信登录
+    post:
+      description: 微信登录
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthServiceV1WxLoginReq'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthServiceV1WxLoginRes'
+          description: ok
+      summary: 微信登录
+      tags:
+      - auth.service.v1.authService
+    summary: WxLogin
+tags:
+- description: 授权认证服务
+  name: auth.service.v1.authService
+

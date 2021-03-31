@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/getkin/kin-openapi/openapi3"
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"gopkg.in/yaml.v2"
 	"net/http"
 	"strings"
 )
@@ -61,7 +63,7 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	if len(file.Services) == 0 {
 		return nil
 	}
-	filename := file.GeneratedFilenamePrefix + "_openapi.json"
+	filename := file.GeneratedFilenamePrefix + "_openapi.yaml"
 	g := gen.NewGeneratedFile(filename, file.GoImportPath)
 	swagger := openapi3.Swagger{
 		OpenAPI: "3.0.0",
@@ -86,6 +88,12 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	genComponents(&swagger, file)
 	genPaths(&swagger, file)
 	jsonData, err := swagger.MarshalJSON()
+	if err != nil {
+		return nil
+	}
+	var inter interface{}
+	_ = json.Unmarshal(jsonData, &inter)
+	jsonData, err = yaml.Marshal(inter)
 	if err != nil {
 		return nil
 	}

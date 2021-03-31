@@ -1,5 +1,5 @@
 
-适用与kratos-go的protobuf生成openapi3协议json扩展
+适用与kratos-go的protobuf生成openapi3文档扩展
 ```golang
 go get -u github.com/realotz/protoc-gen-openapi
 ```
