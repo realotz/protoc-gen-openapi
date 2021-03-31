@@ -100,16 +100,18 @@ message WxLoginReq{
 //订单列表
 message WxLoginRes{
   //订单列表
-  string openid = 1;
+  map<string,string> openid = 1;
   //订单列表
-  string token = 4;
+  repeated string token = 4;
   //订单列表
-  UserInfoMsg user_info = 5;
+  repeated UserInfoMsg user_info = 5;
 }
 
 //订单列表
 message UserInfoMsg{
+  //测试1
   string avatar = 1;
+  //测试2
   uint32 platform = 2;
   string openid = 3;
   string phone = 4;

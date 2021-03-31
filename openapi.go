@@ -9,11 +9,16 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"gopkg.in/yaml.v2"
+	"log"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
 var methodSets = make(map[string]int)
+
+var messages map[string]*protogen.Message
+var diffSchemaMsg map[string]*protogen.Message
 
 type serviceDesc struct {
 	ServiceType string // Greeter
@@ -39,8 +44,29 @@ type methodDesc struct {
 	ResponseBody string
 }
 
+func MarshalStr(fullname string) protoreflect.FullName {
+	name := string(fullname)
+	name = strings.ReplaceAll(name, "_", ".")
+	if name == "" {
+		return ""
+	}
+	temp := strings.Split(name, ".")
+	var s string
+	for _, v := range temp {
+		vv := []rune(v)
+		if len(vv) > 0 {
+			if bool(vv[0] >= 'a' && vv[0] <= 'z') { //首字母大写
+				vv[0] -= 32
+			}
+			s += string(vv)
+		}
+	}
+	return protoreflect.FullName(s)
+}
+
 func Marshal(fullname protoreflect.FullName) protoreflect.FullName {
 	name := string(fullname)
+	name = strings.ReplaceAll(name, "_", ".")
 	if name == "" {
 		return ""
 	}
@@ -59,12 +85,22 @@ func Marshal(fullname protoreflect.FullName) protoreflect.FullName {
 }
 
 // generateFile generates a _http.pb.go file containing kratos errors definitions.
-func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.GeneratedFile {
+func generateFile(gen *protogen.Plugin, file *protogen.File, msgs map[string]*protogen.Message) *protogen.GeneratedFile {
+	messages = msgs
+	diffSchemaMsg = make(map[string]*protogen.Message)
 	if len(file.Services) == 0 {
 		return nil
 	}
 	filename := file.GeneratedFilenamePrefix + "_openapi.yaml"
 	g := gen.NewGeneratedFile(filename, file.GoImportPath)
+	r := regexp.MustCompile("v(\\d+)$")
+	strs := r.FindStringSubmatch(string(file.Desc.Package().Name()))
+	var vStr string
+	if len(strs) >= 2 {
+		vStr = strs[1]
+	} else {
+		vStr = ""
+	}
 	swagger := openapi3.Swagger{
 		OpenAPI: "3.0.0",
 		Components: openapi3.Components{
@@ -77,7 +113,7 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 			TermsOfService: "",
 			Contact:        nil,
 			License:        nil,
-			Version:        string(file.Desc.Package().Name()),
+			Version:        vStr,
 		},
 		Paths:    make(openapi3.Paths, 0),
 		Security: nil,
@@ -85,8 +121,8 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 		Tags:     make(openapi3.Tags, 0, len(file.Services)),
 	}
 	genTags(&swagger, file)
-	genComponents(&swagger, file)
 	genPaths(&swagger, file)
+	genComponents(&swagger)
 	jsonData, err := swagger.MarshalJSON()
 	if err != nil {
 		return nil
@@ -101,16 +137,27 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	return g
 }
 
-func genComponents(swagger *openapi3.Swagger, file *protogen.File) {
-	for _, msg := range file.Messages {
+func findSchemaMsg(str string) {
+	if v, ok := messages[str]; ok {
+		diffSchemaMsg[str] = v
+		for _, f := range v.Fields {
+			if !f.Desc.IsMap() {
+				if f.Desc.Kind() == protoreflect.MessageKind {
+					findSchemaMsg(string(f.Desc.Message().FullName()))
+				}
+			}
+		}
+	} else {
+		log.Println(str)
+	}
+}
+
+func genComponents(swagger *openapi3.Swagger) {
+	for _, msg := range diffSchemaMsg {
 		schema := openapi3.NewObjectSchema()
 		schema.Properties = make(openapi3.Schemas)
 		for _, filed := range msg.Fields {
-			s := createSchema(filed.Desc)
-			s.Description = commentDesc(filed.Comments)
-			schema.Properties[string(filed.Desc.Name())] = &openapi3.SchemaRef{
-				Value: s,
-			}
+			schema.Properties[string(filed.Desc.Name())] = createSchema(filed.Desc, commentDesc(filed.Comments))
 		}
 		swagger.Components.Schemas[string(Marshal(msg.Desc.FullName()))] = &openapi3.SchemaRef{
 			Value: schema,
@@ -118,15 +165,11 @@ func genComponents(swagger *openapi3.Swagger, file *protogen.File) {
 	}
 }
 
-func createSchema(desc protoreflect.FieldDescriptor) *openapi3.Schema {
+func createSchema(desc protoreflect.FieldDescriptor, str string) *openapi3.SchemaRef {
 	var schema *openapi3.Schema
+	var ref string
 	if desc.IsMap() {
-		schema = openapi3.NewObjectSchema()
-		return schema
-	}
-	if desc.IsList() {
-		schema = openapi3.NewArraySchema()
-		return openapi3.NewArraySchema()
+		return openapi3.NewSchemaRef("", openapi3.NewObjectSchema())
 	}
 	switch desc.Kind() {
 	case protoreflect.BoolKind:
@@ -143,14 +186,8 @@ func createSchema(desc protoreflect.FieldDescriptor) *openapi3.Schema {
 		schema = openapi3.NewFloat64Schema()
 		break
 	case protoreflect.MessageKind:
-		schema = openapi3.NewObjectSchema()
-		schema.Properties = make(openapi3.Schemas)
-		for i := 0; i < desc.Message().Fields().Len(); i++ {
-			f := desc.Message().Fields().Get(i)
-			schema.Properties[string(f.Name())] = &openapi3.SchemaRef{
-				Value: createSchema(f),
-			}
-		}
+		ref = fmt.Sprintf("#/components/schemas/%s", Marshal(desc.Message().FullName()))
+		schema = nil
 		break
 	case protoreflect.EnumKind:
 		schema = openapi3.NewSchema()
@@ -165,7 +202,15 @@ func createSchema(desc protoreflect.FieldDescriptor) *openapi3.Schema {
 		schema = openapi3.NewStringSchema()
 		break
 	}
-	return schema
+	if schema != nil {
+		schema.Description = str
+	}
+	if desc.IsList() {
+		arrSchema := openapi3.NewArraySchema()
+		arrSchema.Items = openapi3.NewSchemaRef(ref, schema)
+		return openapi3.NewSchemaRef("", arrSchema)
+	}
+	return openapi3.NewSchemaRef(ref, schema)
 }
 
 func commentDesc(comment protogen.CommentSet) string {
@@ -185,6 +230,7 @@ func genPaths(swagger *openapi3.Swagger, file *protogen.File) {
 			Metadata:    file.Desc.Path(),
 		}
 		for _, method := range service.Methods {
+
 			rule, ok := proto.GetExtension(method.Desc.Options(), annotations.E_Http).(*annotations.HttpRule)
 			if rule != nil && ok {
 				for _, bind := range rule.AdditionalBindings {
@@ -202,7 +248,7 @@ func genPaths(swagger *openapi3.Swagger, file *protogen.File) {
 				Description: commentDesc(service.Methods[k].Comments),
 			}
 			ok := "ok"
-
+			findSchemaMsg(method.Reply)
 			op := &openapi3.Operation{
 				Tags:        []string{string(service.Desc.FullName())},
 				Summary:     commentDesc(service.Methods[k].Comments),
@@ -213,7 +259,7 @@ func genPaths(swagger *openapi3.Swagger, file *protogen.File) {
 						Value: &openapi3.Response{
 							Description: &ok,
 							Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-								Ref: fmt.Sprintf("#/components/schemas/%s%s", Marshal(file.Desc.Package()), method.Reply),
+								Ref: fmt.Sprintf("#/components/schemas/%s", MarshalStr(method.Reply)),
 							}),
 						},
 					},
@@ -224,9 +270,12 @@ func genPaths(swagger *openapi3.Swagger, file *protogen.File) {
 					Description: commentDesc(service.Methods[k].Input.Comments),
 					Required:    true,
 					Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-						Ref: fmt.Sprintf("#/components/schemas/%s%s", Marshal(file.Desc.Package()), method.Request),
+						Ref: fmt.Sprintf("#/components/schemas/%s", MarshalStr(method.Request)),
 					}),
 				},
+			}
+			if method.Method != http.MethodGet {
+				findSchemaMsg(method.Request)
 			}
 			switch method.Method {
 			case http.MethodGet:
@@ -333,8 +382,8 @@ func buildMethodDesc(m *protogen.Method, method, path string) *methodDesc {
 	return &methodDesc{
 		Name:    m.GoName,
 		Num:     methodSets[m.GoName],
-		Request: m.Input.GoIdent.GoName,
-		Reply:   m.Output.GoIdent.GoName,
+		Request: string(m.Input.Desc.FullName()),
+		Reply:   string(m.Output.Desc.FullName()),
 		Path:    path,
 		Method:  method,
 		Vars:    buildPathVars(m, path),
