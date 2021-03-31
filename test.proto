@@ -1,0 +1,164 @@
+// 定义项目 API 的 proto 文件 可以同时描述 gRPC 和 HTTP API
+// protobuf 文件参考:
+//  - https://developers.google.com/protocol-buffers/
+syntax = "proto3";
+import "google/api/annotations.proto";
+package auth.service.v1;
+option go_package = "demo.cn/service/auth/api/v1;auth";
+option java_multiple_files = true;
+option java_package = "cn.demo.api.auth.v1";
+option java_outer_classname = "AuthProto";
+
+// 授权认证服务
+service authService {
+  // 登录
+  rpc Login(LoginReq) returns (LoginRes){
+    option (google.api.http) = {
+      post:"/auth.service.v1.login"
+      body:"*"
+    };
+  }
+  // 检查登录状态
+  rpc LoginStatus(LoginStatusReq) returns (LoginStatusRes){
+    option (google.api.http) = {
+      post:"/auth.service.v1.login.status"
+      body:"*"
+    };
+  }
+
+  // 微信登录
+  rpc WxLogin(WxLoginReq) returns (WxLoginRes){
+    option (google.api.http) = {
+      post:"/auth.service.v1.wxLogin"
+      body:"*"
+    };
+  }
+  // 微信登录绑定
+  rpc WxBind(WxBindReq) returns (WxLoginRes){
+    option (google.api.http) = {
+      post:"/auth.service.v1.wxBind"
+      body:"*"
+    };
+  }
+  // 更新用户信息
+  rpc UpInfo(UpInfoReq) returns (Response){
+    option (google.api.http) = {
+      post:"/auth.service.v1.upInfo"
+      body:"*"
+    };
+  }
+  // 用户信息
+  rpc UserInfo(UserInfoReq) returns (UserInfoMsg){
+    option (google.api.http) = {
+      get:"/auth.service.v1.userinfo"
+    };
+  }
+  // 微信绑定手机号
+  rpc WxBindForSms(SmsLoginReq) returns (WxLoginRes){
+    option (google.api.http) = {
+      post:"/auth.service.v1.wxBindForSms"
+      body:"*"
+    };
+  }
+  // 发送短信验证码
+  rpc SendSms(SendSmsReq) returns (Response){
+    option (google.api.http) = {
+      post:"/auth.service.v1.sendSms"
+      body:"*"
+    };
+  }
+}
+
+message LoginReq{
+  string account = 1;
+  string password = 2;
+  string role = 3;
+  string ip = 4;
+}
+
+message LoginStatusReq{
+  string token = 1;
+}
+
+message LoginStatusRes{
+  uint32 status = 1;
+  string playload = 2;
+}
+
+message UserInfoReq{
+  string uid = 1;
+}
+
+message WxLoginReq{
+  //验证码
+  string code = 1;
+  //appid
+  string appid = 2;
+}
+
+message WxLoginRes{
+  string openid = 1;
+  string token = 4;
+  UserInfoMsg user_info = 5;
+}
+
+message UserInfoMsg{
+  string avatar = 1;
+  uint32 platform = 2;
+  string openid = 3;
+  string phone = 4;
+  uint32 uid = 5;
+  uint32 user_type = 6;
+  string name = 7;
+  uint32 sex = 8;
+  uint32 age = 9;
+  string email = 10;
+  string account = 11;
+}
+
+message UpInfoReq{
+  string uid = 1;
+  string nickName = 2;
+  string avatarUrl = 3;
+  string gender = 4;
+  string city = 5;
+  string province = 6;
+  string country = 7;
+}
+
+message WxBindReq{
+  string openid = 1;
+  string nickName = 2;
+  string avatarUrl = 3;
+  string gender = 4;
+  string city = 5;
+  string province = 6;
+  string country = 7;
+  string encryptedData = 8;
+  string iv = 9;
+  string token = 10;
+}
+
+message LoginRes{
+  string token = 1;
+  uint32 err_code = 2;
+  string err_message = 3;
+}
+
+message SendSmsReq{
+  string phone = 1;
+}
+
+message SmsLoginReq{
+  string token = 1;
+  string phone = 2;
+  string code = 3;
+  string nickName = 4;
+  string avatarUrl = 5;
+}
+
+message JwtReq{
+  string jwt = 1;
+}
+
+message Response{}
